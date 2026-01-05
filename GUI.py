@@ -246,6 +246,7 @@ class BaselineProcessor:
             "rolling_std",
         ],
         "Miscellaneous": ["beads", "custom_bc", "interp_pts"],
+        "Custom": ["base_remove"],
     }
 
     SKIP_PARAMS = {"weights", "mask", "x_data", "z", "return_coef", "kwargs"}
@@ -333,6 +334,8 @@ class ParameterWidgetFactory:
             return ParameterWidgetFactory._create_float_spinbox(
                 name, default, on_change_callback
             )
+        elif param_type == "file":
+            return ParameterWidgetFactory._create_file_pushbutton()
         elif param_type == "none":
             return ParameterWidgetFactory._create_default_spinbox(
                 name, on_change_callback
@@ -370,6 +373,11 @@ class ParameterWidgetFactory:
 
         widget.setValue(default)
         widget.valueChanged.connect(callback)
+        return widget
+
+    @staticmethod
+    def _create_file_pushbutton():
+        widget = QPushButton("open")
         return widget
 
     @staticmethod
@@ -491,12 +499,14 @@ class MainWindow(QMainWindow):
         data = self.generator.generate()
         self.x_data = data.x
         self.y_data = data.y
+        self.cache_baseline = None
 
         # Initialize processors
         self.baseline_processor = BaselineProcessor(self.x_data)
         self.noise_reducer = NoiseReducer()
 
         # State
+        self.current_category = None
         self.current_algorithm = None
         self.param_widgets = {}
 
@@ -749,6 +759,7 @@ class MainWindow(QMainWindow):
 
     def _on_category_changed(self, category: str):
         """Handle category selection change."""
+        self.current_category = category
         self.algorithm_combo.clear()
         algorithms = BaselineProcessor.CATEGORIES.get(category, [])
         self.algorithm_combo.addItems(algorithms)
@@ -759,6 +770,7 @@ class MainWindow(QMainWindow):
     def _on_algorithm_changed(self, algorithm: str):
         """Handle algorithm selection change."""
         self.current_algorithm = algorithm
+        self.cache_baseline = None
         self._update_parameter_widgets()
         self._schedule_update()
 
@@ -776,9 +788,12 @@ class MainWindow(QMainWindow):
             return
 
         # Get parameters
-        params = self.baseline_processor.get_algorithm_parameters(
-            self.current_algorithm
-        )
+        if self.current_category == "Custom":
+            params = {"base": {"default": None, "annotation": None, "type": "file"}}
+        else:
+            params = self.baseline_processor.get_algorithm_parameters(
+                self.current_algorithm
+            )
 
         if not params:
             self.params_layout.addRow(
@@ -794,6 +809,11 @@ class MainWindow(QMainWindow):
             if widget:
                 self.params_layout.addRow(f"{param_name}:", widget)
                 self.param_widgets[param_name] = widget
+
+                if self.current_category == "Custom" and isinstance(
+                    widget, QPushButton
+                ):
+                    widget.clicked.connect(lambda: self._open_spectrum(True))
 
     def _open_docs(self):
         url = QUrl("https://pybaselines.readthedocs.io/en/latest/")
@@ -815,10 +835,18 @@ class MainWindow(QMainWindow):
 
             # Apply baseline correction
             if self.baseline_enabled.isChecked():
-                params = self._get_baseline_params()
-                baseline, corrected = self.baseline_processor.apply_correction(
-                    self.y_data, self.current_algorithm, params
-                )
+                if self.current_category != "Custom":
+                    params = self._get_baseline_params()
+                    baseline, corrected = self.baseline_processor.apply_correction(
+                        self.y_data, self.current_algorithm, params
+                    )
+                else:
+                    baseline = self.cache_baseline
+                    if baseline is not None:
+                        corrected = self.y_data - baseline
+
+            if corrected is not None:
+                corrected = corrected.clip(min=0)
 
             # Apply noise reduction
             if self.noise_enabled.isChecked():
@@ -873,7 +901,7 @@ class MainWindow(QMainWindow):
         self.y_data = data.y
         self._schedule_update()
 
-    def _open_spectrum(self):
+    def _open_spectrum(self, baseline_spectrum: bool = False):
         """Open spectrum from file."""
         file_name, _ = QFileDialog.getOpenFileName(
             parent=self,
@@ -892,7 +920,10 @@ class MainWindow(QMainWindow):
 
         y_data = self.file_manager.load_spectrum(path)
         if y_data is not None:
-            self.y_data = y_data
+            if baseline_spectrum:
+                self.cache_baseline = y_data
+            else:
+                self.y_data = y_data
             self._update_plot()
 
 
