@@ -575,6 +575,15 @@ class MainWindow(QMainWindow):
         alg_layout.addWidget(self.algorithm_combo)
         algo_layout.addLayout(alg_layout)
 
+        algo_layout.addSpacing(10)
+
+        note_label = QLabel(
+            "Note: Switching algorithms discard input parameters in the previous algorithm."
+        )
+        note_label.setStyleSheet("color")
+        note_label.setWordWrap(True)
+        algo_layout.addWidget(note_label)
+
         algo_group.setLayout(algo_layout)
         layout.addWidget(algo_group)
 
