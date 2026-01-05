@@ -71,13 +71,13 @@ class FileManager:
 
     def load_spectrum(self, file_path: Path) -> np.ndarray | None:
         """Load spectrum data from file."""
-        if xrf is None:
-            raise ModuleNotFoundError("xrflab not found")
-
         ext = file_path.suffix
 
         if ext == ".npy":
             return np.load(file_path)
+
+        if xrf is None:
+            raise ModuleNotFoundError("xrflab not found")
 
         analyse = xrf.Analyse.from_file(file_path)
         condition = self._select_condition(analyse.data.keys())
