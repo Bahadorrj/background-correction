@@ -197,3 +197,5 @@ docs/source/api/
 .coverage
 htmlcov/
 coverage.xml
+
+poetry.toml
