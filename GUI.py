@@ -1,37 +1,35 @@
-import sys
 import inspect
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pyqtgraph as pg
-
-from pathlib import Path
-from typing import Any
-from dataclasses import dataclass
-
-from PyQt6.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QFrame,
-    QVBoxLayout,
-    QHBoxLayout,
-    QComboBox,
-    QLabel,
-    QScrollArea,
-    QFormLayout,
-    QDoubleSpinBox,
-    QSpinBox,
-    QCheckBox,
-    QGroupBox,
-    QPushButton,
-    QSplitter,
-    QDialog,
-    QFileDialog,
-    QDialogButtonBox,
-)
+from pybaselines import Baseline
 from PyQt6.QtCore import Qt, QTimer, QUrl
 from PyQt6.QtGui import QDesktopServices
-from pybaselines import Baseline
+from PyQt6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFormLayout,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QScrollArea,
+    QSpinBox,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
+)
 from scipy.signal import savgol_filter
 
 try:
